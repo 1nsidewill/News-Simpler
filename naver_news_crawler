@@ -1,0 +1,78 @@
+'''
+naver_news_crawler.ipynb
+version. 1
+update. 2021/02/02
+'''
+
+import pandas as pd
+import numpy as np
+import time
+import re
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+import requests
+from urllib.request import urlopen   
+from bs4 import BeautifulSoup
+
+
+def load_url(cont_num):
+    search_key = 'BTS | 방탄소년단'
+    sort_num = '2' #0:관련된 순, 1:최신순
+    start_date = '2020.09.01'
+    end_date = '2020.12.31'
+    cont_num = str(cont_num)  #페이지 별 첫번째 뉴스 번호 (페이지당 10건)
+    url='https://search.naver.com/search.naver?&where=news&query='+search_key\
+    +'&sm=tab_pge&sort='+sort_num+'&photo=0&field=1&reporter_article=&pd=3&ds='+start_date+'&de='+end_date+'&docid=&nso=so:da,p:from'\
+    + start_date.replace('.','')+'to'+end_date.replace('.','')+'%2Ca%3At&mynews='+cont_num+'&refresh_start=0&related=0'
+    return url
+
+# webdriver open
+path = './lib/chromedriver.exe'
+driver = webdriver.Chrome(path)
+driver.get(load_url(1))
+
+# ------------------------------
+# 검색 조건: 언론사 선택
+# ------------------------------
+media_list = {'경향':'//*[@id="ca_1032"]', '중앙':'//*[@id="ca_1025"]','한겨례':'//*[@id="ca_1028"]','조선':'//*[@id="ca_1023"]'}
+
+# - btn: 출처
+driver.find_element(By.XPATH, '//*[@id="snb"]/div/ul/li[5]/a').click() 
+
+# - check box: 언론사 선택
+for s in media_list:
+    element = driver.find_element(By.XPATH, media_list[s])
+    driver.execute_script("arguments[0].click();", element)
+    print(s)
+    time.sleep(0.5)
+    
+# - btn: 확인
+driver.find_element(By.XPATH, '//*[@id="snb"]/div/ul/li[5]/div/span/span[1]/button').click()
+print('확인')    
+
+# 웹페이지 순서대로 탐색
+# start_con = 1
+# end_con = 32
+# for i in range(start_con,end_con,10):
+#     driver.get(load_url(i))
+#     time.sleep(3)
+
+# ------------------------------
+#  뉴스 데이터 가져오기
+# ------------------------------
+# - 페이지(html) parsing
+page_html = driver.page_source
+bs_obj = BeautifulSoup(page_html, 'lxml')
+
+# - 페이지 내 '네이버뉴스' 링크만 가져오기
+link_list = []
+naver = 'news.naver.com/main/'
+for a in bs_obj.find_all('a', href=True):
+    if naver in a['href']:
+        print(a['href'])
+        link_list.append(a['href'])
+
+
+#... 오늘은 여기까지..
