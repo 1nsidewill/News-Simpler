@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 
 def load_url(cont_num):
     search_key = 'BTS | 방탄소년단'
-    sort_num = '2' #0:관련된 순, 1:최신순
+    sort_num = '2' #0:관련된 순, 1:최신순, 2:오래된순
     start_date = '2020.09.01'
     end_date = '2020.12.31'
     cont_num = str(cont_num)  #페이지 별 첫번째 뉴스 번호 (페이지당 10건)
