@@ -130,20 +130,11 @@ def news_parsing(url):
     bs_obj_n = BeautifulSoup(res.text, 'lxml')
 
     news = []
-    # media (언론사)
-    news.append(get_media(bs_obj_n))
-    
-    # date (기사 입력일), type: str
-    news.append(get_date(bs_obj_n))
-    
-    # title
-    news.append(get_title(bs_obj_n))
-    
-    # content
-    news.append(get_content(bs_obj_n))
-    
-    # url
-    news.append(url)
+    news.append(get_media(bs_obj_n)) # media
+    news.append(get_date(bs_obj_n)) #date
+    news.append(get_title(bs_obj_n)) # title
+    news.append(get_content(bs_obj_n)) # content
+    news.append(url) # url
     
     return news
     
