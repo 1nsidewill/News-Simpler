@@ -1,7 +1,7 @@
 '''
 naver_news_crawler.ipynb
-version. 1
-update. 2021/02/02
+version. 0.2
+update. 2021/02/03
 '''
 
 import pandas as pd
@@ -205,7 +205,7 @@ for i in range(start_con,end_con,10):
     
 news_data = []
 
-for n,i in enumerate(link_list):#[k:k+1]):
+for n,i in enumerate(link_list):
     print(n,'.',i)
     news_data.append(news_parsing(i))
     
