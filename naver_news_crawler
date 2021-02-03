@@ -63,27 +63,27 @@ def clear_content(text):
 # ------------------------------
 # media (언론사)
 # ------------------------------
-def get_media(bs4):
-    media = bs4.find('div', {'class':'press_logo'}).find('img')['alt']
+def get_media(bs):
+    media = bs.find('div', {'class':'press_logo'}).find('img')['alt']
     return media
 
 # ------------------------------
 # date (기사 입력일), type: str
 # ------------------------------
-def get_date(bs4):
-    date = bs4.find('span',{'class':['t11','author']})
+def get_date(bs):
+    date = bs.find('span',{'class':['t11','author']})
     date = '-'.join(re.findall('\d+',date.text)[:3]) 
     return date
     
 # ------------------------------    
 # title
 # ------------------------------
-def get_title(bs4):
+def get_title(bs):
     title=''
-    if bs4.find('h3',{'id':'articleTitle'}):
-        title = bs4.find('h3',{'id':'articleTitle'})
-    elif bs4.find('h2',{'class':'end_tit'}):
-        title = bs4.find('h2',{'class':'end_tit'})
+    if bs.find('h3',{'id':'articleTitle'}):
+        title = bs.find('h3',{'id':'articleTitle'})
+    elif bs.find('h2',{'class':'end_tit'}):
+        title = bs.find('h2',{'class':'end_tit'})
     else:
         pass
     title = re.sub(r'[^A-Za-z0-9가-힣 ]','',title.text)  #cleaning
@@ -92,12 +92,12 @@ def get_title(bs4):
 # ------------------------------
 # content
 # ------------------------------
-def get_content(bs4):
-    article_obj =bs4.find_all('div')
-    if bs4.find('div',{'id':'articleBodyContents'}):
-        article_obj = bs4.find('div',{'id':'articleBodyContents'})
-    elif bs4.find('div',{'id':'articleBody'}):
-        article_obj = bs4.find('div',{'id':'articleBody'})
+def get_content(bs):
+    article_obj =bs.find_all('div')
+    if bs.find('div',{'id':'articleBodyContents'}):
+        article_obj = bs.find('div',{'id':'articleBodyContents'})
+    elif bs.find('div',{'id':'articleBody'}):
+        article_obj = bs.find('div',{'id':'articleBody'})
     print(type(article_obj))
     
     if 'ResultSet' in str(type(article_obj)):
