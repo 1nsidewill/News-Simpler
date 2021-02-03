@@ -67,12 +67,9 @@ page_html = driver.page_source
 bs_obj = BeautifulSoup(page_html, 'lxml')
 
 # - 페이지 내 '네이버뉴스' 링크만 가져오기
-link_list = []
 naver = 'news.naver.com/main/'
-for a in bs_obj.find_all('a', href=True):
-    if naver in a['href']:
-        print(a['href'])
-        link_list.append(a['href'])
+link_list = [ a['href'] for a in bs_obj.find_all('a', href=True) if naver in a['href'] ]
+print(len(link_list))
 
 
-#... 오늘은 여기까지..
+
