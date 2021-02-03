@@ -17,6 +17,11 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
 
+# ================ method ===================
+
+# ------------------------------
+# load_url : 페이지 번호로 url 가져옴
+# ------------------------------
 def load_url(cont_num):
     search_key = 'BTS | 방탄소년단'
     sort_num = '2' #0:관련된 순, 1:최신순, 2:오래된순
@@ -25,13 +30,132 @@ def load_url(cont_num):
     cont_num = str(cont_num)  #페이지 별 첫번째 뉴스 번호 (페이지당 10건)
     url='https://search.naver.com/search.naver?&where=news&query='+search_key\
     +'&sm=tab_pge&sort='+sort_num+'&photo=0&field=1&reporter_article=&pd=3&ds='+start_date+'&de='+end_date+'&docid=&nso=so:da,p:from'\
-    + start_date.replace('.','')+'to'+end_date.replace('.','')+'%2Ca%3At&mynews='+cont_num+'&refresh_start=0&related=0'
+    + start_date.replace('.','')+'to'+end_date.replace('.','')+',a:t&mynews=1&start='+cont_num+'&refresh_start=0'
     return url
+    
+# ------------------------------
+# 뉴스 내용 정제
+# ------------------------------
+def clear_content(text):
+    remove_special = re.sub('[∙©\{\}\[\]\/?,;:|\)*~`!^\-_+<>@\#$%&n▲▶◆◀■\\\=\(\'\"]', '', text)
+    remove_author = re.sub('\w\w\w 기자', '', remove_special)
+    remove_flash_error = re.sub('본문 내용|TV플레이어| 동영상 뉴스|flash 오류를 우회하기 위한 함수 추가fuctio flashremoveCallback|tt|t|앵커 멘트|xa0', '', remove_author)
+    # 공백 에러 삭제
+    remove_strip = remove_flash_error.strip().replace('   ', '')
+    # 기사 내용을 reverse 한다.
+    reverse_content = ''.join(reversed(remove_strip))
+    cleared_content = ''
+    for i in range(0, len(remove_strip)):
+    # 기사가 reverse 되었기에  ".다"로 기사가 마무리 되므로, 이를 탐색하여 불필요한 정보를 모두 지운다.
+    # 이 매커니즘에 의해 영문 기사가 완전히 나오지 않는 이슈가 있습니다... edge case가 적다면  '.다'를 '.'으로바꾸는 편이 나아보입니다.
+        if reverse_content[i:i + 2] == '.다':
+            cleared_content = ''.join(reversed(reverse_content[i:]))
+            break
+    cleared_content = re.sub('if deployPhase(.*)displayRMCPlayer', '', cleared_content)
+    
+    cleared_content = re.sub('[\t]',' ',cleared_content)
+    cleared_content = re.split('\n',cleared_content)
+    cleared_content = ' '.join([ s for s in cleared_content if len(s)>80 ])
 
+    return cleared_content
+
+
+# ------------------------------
+# media (언론사)
+# ------------------------------
+def get_media(bs4):
+    media = bs4.find('div', {'class':'press_logo'}).find('img')['alt']
+    return media
+
+# ------------------------------
+# date (기사 입력일), type: str
+# ------------------------------
+def get_date(bs4):
+    date = bs4.find('span',{'class':['t11','author']})
+    date = '-'.join(re.findall('\d+',date.text)[:3]) 
+    return date
+    
+# ------------------------------    
+# title
+# ------------------------------
+def get_title(bs4):
+    title=''
+    if bs4.find('h3',{'id':'articleTitle'}):
+        title = bs4.find('h3',{'id':'articleTitle'})
+    elif bs4.find('h2',{'class':'end_tit'}):
+        title = bs4.find('h2',{'class':'end_tit'})
+    else:
+        pass
+    title = re.sub(r'[^A-Za-z0-9가-힣 ]','',title.text)  #cleaning
+    return title
+
+# ------------------------------
+# content
+# ------------------------------
+def get_content(bs4):
+    article_obj =bs4.find_all('div')
+    if bs4.find('div',{'id':'articleBodyContents'}):
+        article_obj = bs4.find('div',{'id':'articleBodyContents'})
+    elif bs4.find('div',{'id':'articleBody'}):
+        article_obj = bs4.find('div',{'id':'articleBody'})
+    print(type(article_obj))
+    
+    if 'ResultSet' in str(type(article_obj)):
+        print('---!!---')
+        article_obj = article_obj[0]
+        
+    if article_obj.find('script'):
+        article_obj.script.extract()
+    if article_obj.find('strong'):
+        article_obj.strong.extract()
+#     if article_obj.find('img'):
+#         article_obj.img.extract()
+    
+    for e in range(len(article_obj.find_all('em'))):
+        article_obj.em.extract()
+
+    for i in range(len(article_obj.find_all('a'))):
+        article_obj.a.extract()
+    article = clear_content(article_obj.text)
+    
+    return article
+
+# ------------------------------
+# news parsing
+# ------------------------------
+def news_parsing(url):
+    
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko'}
+    res = requests.post(url, headers=headers)
+    bs_obj_n = BeautifulSoup(res.text, 'lxml')
+
+    news = []
+    # media (언론사)
+    news.append(get_media(bs_obj_n))
+    
+    # date (기사 입력일), type: str
+    news.append(get_date(bs_obj_n))
+    
+    # title
+    news.append(get_title(bs_obj_n))
+    
+    # content
+    news.append(get_content(bs_obj_n))
+    
+    # url
+    news.append(url)
+    
+    return news
+    
+# ===========================================
+
+
+# ================= main ====================
 # webdriver open
 path = './lib/chromedriver.exe'
 driver = webdriver.Chrome(path)
 driver.get(load_url(1))
+time.sleep(0.5)
 
 # ------------------------------
 # 검색 조건: 언론사 선택
@@ -52,24 +176,40 @@ for s in media_list:
 driver.find_element(By.XPATH, '//*[@id="snb"]/div/ul/li[5]/div/span/span[1]/button').click()
 print('확인')    
 
-# 웹페이지 순서대로 탐색
-# start_con = 1
-# end_con = 32
-# for i in range(start_con,end_con,10):
-#     driver.get(load_url(i))
-#     time.sleep(3)
-
 # ------------------------------
-#  뉴스 데이터 가져오기
+# 웹페이지 순서대로, 뉴스 url 가져오기
 # ------------------------------
-# - 페이지(html) parsing
-page_html = driver.page_source
-bs_obj = BeautifulSoup(page_html, 'lxml')
-
-# - 페이지 내 '네이버뉴스' 링크만 가져오기
+start_con = 1
+end_con = 32
+link_list =[]
 naver = 'news.naver.com/main/'
-link_list = [ a['href'] for a in bs_obj.find_all('a', href=True) if naver in a['href'] ]
-print(len(link_list))
+
+for i in range(start_con,end_con,10):
+    driver.get(load_url(i))
+    # - 페이지(html) parsing
+    page_html = driver.page_source
+    bs_obj = BeautifulSoup(page_html, 'lxml')
+    # - 페이지 내 '네이버뉴스' 링크(10개) 가져오기
+    lis = [ a['href'] for a in bs_obj.find_all('a', href=True) if naver in a['href'] ]
+    link_list.extend(lis)
+    time.sleep(2)
+    
+# print(len(link_list))
+# print(link_list)
 
 
+# webdriver quit
+# driver.quit()
 
+
+    
+news_data = []
+
+for n,i in enumerate(link_list):#[k:k+1]):
+    print(n,'.',i)
+    news_data.append(news_parsing(i))
+    
+# news_data 확인하기
+col_name = ['media','date','title','article_original','url']
+news_df = pd.DataFrame(news_data,columns = col_name)
+# news_df
