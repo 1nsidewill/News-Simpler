@@ -157,7 +157,6 @@ print('확인')
 # 웹페이지 순서대로, 뉴스 url 가져오기
 # ------------------------------
 num = 1 
-step = 10
 link_list =[]
 naver = 'news.naver.com/main/'
 
