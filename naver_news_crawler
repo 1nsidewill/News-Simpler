@@ -37,8 +37,8 @@ def load_url(cont_num):
 # 뉴스 내용 정제
 # ------------------------------
 def clear_content(text):
-    remove_special = re.sub('[∙©\{\}\[\]\/?,;:|\)*~`!^\-_+<>@\#$%&n▲▶◆◀■\\\=\(\'\"]', '', text)
-    remove_flash_error = re.sub('본문 내용|TV플레이어| 동영상 뉴스|flash 오류를 우회하기 위한 함수 추가fuctio flashremoveCallback|tt|t|앵커 멘트|xa0', '', remove_special)
+    remove_special = re.sub('[\{\}\[\]\/?,;:|\)*~`!^\-_+<>@\#$&▲▶◆◀■【】\\\=\(\'\"]', '', text)
+    remove_flash_error = re.sub('본문 내용|TV플레이어| 동영상 뉴스|flash 오류를 우회하기 위한 함수 추가function  flash removeCallback|tt|앵커 멘트|xa0', '', remove_special)
     remove_strip = remove_flash_error.strip().replace('   ', '') # 공백 에러 삭제
     remove_dphase = re.sub('if deployPhase(.*)displayRMCPlayer', '', remove_strip)
    
