@@ -1,6 +1,6 @@
 '''
 naver_news_crawler.ipynb
-version. 1.0
+version. 1.1
 update. 2021/02/04
 '''
 
@@ -156,19 +156,22 @@ print('확인')
 # ------------------------------
 # 웹페이지 순서대로, 뉴스 url 가져오기
 # ------------------------------
-start_con = 1
-end_con = 32
+num = 1 
+step = 10
 link_list =[]
 naver = 'news.naver.com/main/'
 
-for i in range(start_con,end_con,10):
-    driver.get(load_url(i))
+while(1):
+    driver.get(load_url(num))
     # - 페이지(html) parsing
     page_html = driver.page_source    # type: str
     bs_obj = BeautifulSoup(page_html, 'lxml')
     # - 페이지 내 '네이버뉴스' 링크(10개) 가져오기
     lis = [ a['href'] for a in bs_obj.find_all('a', href=True) if naver in a['href'] ]
+    if len(lis)==0:
+        break
     link_list.extend(lis)
+    num+=10
     time.sleep(0.5)
     
 # print(len(link_list))
