@@ -1,0 +1,120 @@
+import requests
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+
+import nltk
+import time
+
+
+#chrome 드라이버
+path = './chromedriver.exe'
+driver = webdriver.Chrome(path)
+
+start_url = 'https://search.naver.com/search.naver?where=news&query=%EB%B0%A9%ED%83%84%EC%86%8C%EB%85%84%EB%8B%A8%20%7C%20BTS&sm=tab_opt&sort=2&photo=0&field=1&reporter_article=&pd=3&ds=2020.01.01&de=2020.05.31&docid=&nso=so%3Ada%2Cp%3Afrom20200101to20200531%2Ca%3At&mynews=1&refresh_start=0&related=0'
+driver.get(start_url)
+
+
+#4대 언론사 체크하여 관련 기사만 뽑아내는 driver명령
+driver.find_element_by_xpath('//*[@id="snb"]/div/ul/li[5]/a').click()
+driver.find_element_by_xpath('//*[@id="ca_1032"]').click()
+driver.find_element_by_xpath('//*[@id="ca_1025"]').click()
+driver.find_element_by_xpath('//*[@id="ca_1028"]').click()
+driver.find_element_by_xpath('//*[@id="ca_1023"]').click()  #조선
+driver.find_element_by_xpath('//*[@id="snb"]/div/ul/li[5]/div/span/span[1]/button/span/strong').click()
+
+
+#link 가져오는 코드
+
+link_list_total = []
+
+#처음 한 번은 for문 전에 가져와야한다.
+
+link_list=[]
+result = driver.page_source
+bs_obj = BeautifulSoup(result,"lxml")
+
+for a in bs_obj.find_all('a', href=True):
+    naver = 'news.naver.com/main/'
+    if naver in a['href']:
+        #print(a['href'])
+        link_list.append(a['href'])
+link_list_total.append(link_list)
+
+#page당 돌려가며 url 수집
+
+for i in range(1,10):
+
+    url = 'https://search.naver.com/search.naver?&where=news&query=%EB%B0%A9%ED%83%84%EC%86%8C%EB%85%84%EB%8B%A8%20%7C%20BTS&sm=tab_pge&sort=2&photo=0&field=1&reporter_article=&pd=3&ds=2020.01.01&de=2020.05.31&docid=&nso=so:da,p:from20200101to20200531,a:t&mynews=1&start='+str(i)+'1&refresh_start=0'
+    driver.get(url)
+
+    link_list=[]
+    result = driver.page_source
+    bs_obj = BeautifulSoup(result,"lxml")
+
+    for a in bs_obj.find_all('a', href=True):
+        naver = 'news.naver.com/main/'
+        if naver in a['href']:
+            #print(a['href'])
+            link_list.append(a['href'])   
+
+    link_list_total.append(link_list)        
+    time.sleep(0.5)   
+
+print(link_list_total)
+
+
+#받은 url로 request하는 함수
+def url_go(url):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit 537.36 (KHTML, like Gecko) Chrome",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+    }
+    result = requests.get(url, headers=headers)
+    bs = BeautifulSoup(result.content,'html.parser')
+    #time.sleep(0.5)
+    return (bs)
+    
+    
+#언론사 리스트에 저장
+media_list= []
+for ls in link_list_total:
+    for url in ls:
+        bs = url_go(url)
+        media_name = bs.find('div',{'class':'press_logo'}).find('img')['alt']
+        media_list.append(media_name)
+print(media_list)
+
+
+#body 저장
+body_list = []
+for ls in link_list_total:
+    for url in ls:
+        bs = url_go(url)
+        body = bs.find('div',{'class':'article_body'}).text
+        body_list.append(body)
+print(body_list)
+
+
+#정제하는 코드
+import re
+def clear_content(text):
+    remove_special = re.sub('[∙©\{\}\[\]\/?,;:|\)*~`!^\-_+<>@\#$%&n▲▶◆◀■\\\=\(\'\"\n\r\t]', '', text)
+    remove_author = re.sub('\w\w\w 기자', '', remove_special)
+    remove_flash_error = re.sub('본문 내용|TV플레이어| 동영상 뉴스|flash 오류를 우회하기 위한 함수 추가fuctio flashremoveCallback|tt|t|앵커 멘트|xa0', '', remove_author)
+    # 공백 에러 삭제
+    remove_strip = remove_flash_error.strip().replace('   ', '')
+    # 기사 내용을 reverse 한다.
+    reverse_content = ''.join(reversed(remove_strip))
+    cleared_content = ''
+    for i in range(0, len(remove_strip)):
+        # 기사가 reverse 되었기에  ".다"로 기사가 마무리 되므로, 이를 탐색하여 불필요한 정보를 모두 지운다.
+        # 이 매커니즘에 의해 영문 기사가 완전히 나오지 않는 이슈가 있습니다... edge case가 적다면  '.다'를 '.'으로바꾸는 편이 나아보입니다.
+       if reverse_content[i:i + 2] == '.다':
+            cleared_content = ''.join(reversed(reverse_content[i:]))
+            break
+    cleared_content = re.sub('if deployPhase(.*)displayRMCPlayer', '', cleared_content)
+    return cleared_content
+    
+    
