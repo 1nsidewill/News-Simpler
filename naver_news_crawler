@@ -1,19 +1,19 @@
 '''
 naver_news_crawler.ipynb
-version. 0.2
-update. 2021/02/03
+version. 1.0
+update. 2021/02/04
 '''
 
+import re
 import pandas as pd
 import numpy as np
-import time
-import re
+from tqdm import tqdm_notebook   # 진행 상황을 bar로 시각화
 
+import time
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-import requests
-from urllib.request import urlopen   
+import requests  
 from bs4 import BeautifulSoup
 
 
@@ -38,24 +38,13 @@ def load_url(cont_num):
 # ------------------------------
 def clear_content(text):
     remove_special = re.sub('[∙©\{\}\[\]\/?,;:|\)*~`!^\-_+<>@\#$%&n▲▶◆◀■\\\=\(\'\"]', '', text)
-    remove_author = re.sub('\w\w\w 기자', '', remove_special)
-    remove_flash_error = re.sub('본문 내용|TV플레이어| 동영상 뉴스|flash 오류를 우회하기 위한 함수 추가fuctio flashremoveCallback|tt|t|앵커 멘트|xa0', '', remove_author)
-    # 공백 에러 삭제
-    remove_strip = remove_flash_error.strip().replace('   ', '')
-    # 기사 내용을 reverse 한다.
-    reverse_content = ''.join(reversed(remove_strip))
-    cleared_content = ''
-    for i in range(0, len(remove_strip)):
-    # 기사가 reverse 되었기에  ".다"로 기사가 마무리 되므로, 이를 탐색하여 불필요한 정보를 모두 지운다.
-    # 이 매커니즘에 의해 영문 기사가 완전히 나오지 않는 이슈가 있습니다... edge case가 적다면  '.다'를 '.'으로바꾸는 편이 나아보입니다.
-        if reverse_content[i:i + 2] == '.다':
-            cleared_content = ''.join(reversed(reverse_content[i:]))
-            break
-    cleared_content = re.sub('if deployPhase(.*)displayRMCPlayer', '', cleared_content)
-    
-    cleared_content = re.sub('[\t]',' ',cleared_content)
-    cleared_content = re.split('\n',cleared_content)
-    cleared_content = ' '.join([ s for s in cleared_content if len(s)>80 ])
+    remove_flash_error = re.sub('본문 내용|TV플레이어| 동영상 뉴스|flash 오류를 우회하기 위한 함수 추가fuctio flashremoveCallback|tt|t|앵커 멘트|xa0', '', remove_special)
+    remove_strip = remove_flash_error.strip().replace('   ', '') # 공백 에러 삭제
+    remove_dphase = re.sub('if deployPhase(.*)displayRMCPlayer', '', remove_strip)
+   
+    cleared_t = re.sub('[\t]',' ',remove_dphase)
+    cleared_n = re.split('\n',cleared_t)
+    cleared_content = ' '.join([ s for s in cleared_n if len(s)>80 ])
 
     return cleared_content
 
@@ -93,29 +82,26 @@ def get_title(bs):
 # content
 # ------------------------------
 def get_content(bs):
-    article_obj =bs.find_all('div')
-    if bs.find('div',{'id':'articleBodyContents'}):
-        article_obj = bs.find('div',{'id':'articleBodyContents'})
-    elif bs.find('div',{'id':'articleBody'}):
-        article_obj = bs.find('div',{'id':'articleBody'})
-    print(type(article_obj))
-    
-    if 'ResultSet' in str(type(article_obj)):
-        print('---!!---')
-        article_obj = article_obj[0]
-        
+    article_obj =bs.find_all('div')[0]   # type: ResultSet
+
+    if article_obj.find('div',{'id':'articleBodyContents'}):
+        article_obj = article_obj.find('div',{'id':'articleBodyContents'})
+    elif article_obj.find('div',{'class': 'article_body'}):
+        article_obj = article_obj.find('div',{'id':'articeBody'})
+
+    # cleaning (tag)
+    for e in range(len(article_obj.find_all('em'))):
+        article_obj.em.extract()
+        article_obj.img.extract()
+    for i in range(len(article_obj.find_all('a'))):
+        article_obj.a.extract()
     if article_obj.find('script'):
         article_obj.script.extract()
     if article_obj.find('strong'):
         article_obj.strong.extract()
-#     if article_obj.find('img'):
-#         article_obj.img.extract()
     
-    for e in range(len(article_obj.find_all('em'))):
-        article_obj.em.extract()
-
-    for i in range(len(article_obj.find_all('a'))):
-        article_obj.a.extract()
+    # cleaning (text)
+    article_obj = BeautifulSoup(re.split('\w\w\w 기자',article_obj.prettify())[0], 'lxml')
     article = clear_content(article_obj.text)
     
     return article
@@ -130,11 +116,11 @@ def news_parsing(url):
     bs_obj_n = BeautifulSoup(res.text, 'lxml')
 
     news = []
-    news.append(get_media(bs_obj_n)) # media
-    news.append(get_date(bs_obj_n)) #date
-    news.append(get_title(bs_obj_n)) # title
-    news.append(get_content(bs_obj_n)) # content
-    news.append(url) # url
+    news.append(get_media(bs_obj_n))     # media
+    news.append(get_date(bs_obj_n))      # date
+    news.append(get_title(bs_obj_n))     # title
+    news.append(get_content(bs_obj_n))   # content
+    news.append(url)                     # url
     
     return news
     
@@ -142,10 +128,10 @@ def news_parsing(url):
 
 
 # ================= main ====================
-# webdriver open
+# - webdriver open
 path = './lib/chromedriver.exe'
 driver = webdriver.Chrome(path)
-driver.get(load_url(1))
+driver.get(load_url(1))             # 검색 조건 지정된 1 페이지 접속
 time.sleep(0.5)
 
 # ------------------------------
@@ -178,26 +164,23 @@ naver = 'news.naver.com/main/'
 for i in range(start_con,end_con,10):
     driver.get(load_url(i))
     # - 페이지(html) parsing
-    page_html = driver.page_source
+    page_html = driver.page_source    # type: str
     bs_obj = BeautifulSoup(page_html, 'lxml')
     # - 페이지 내 '네이버뉴스' 링크(10개) 가져오기
     lis = [ a['href'] for a in bs_obj.find_all('a', href=True) if naver in a['href'] ]
     link_list.extend(lis)
-    time.sleep(2)
+    time.sleep(0.5)
     
 # print(len(link_list))
 # print(link_list)
 
 
-# webdriver quit
+# - webdriver quit
 # driver.quit()
 
 
-    
 news_data = []
-
-for n,i in enumerate(link_list):
-    print(n,'.',i)
+for i in tqdm_notebook(link_list):
     news_data.append(news_parsing(i))
     
 # news_data 확인하기
