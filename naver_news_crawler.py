@@ -179,6 +179,10 @@ for i in range(start_con,end_con,10):
 # driver.quit()
 
 
+# ------------------------------
+# 뉴스 데이터 가져오기 
+# : media, date, title, content, url
+# ------------------------------
 news_data = []
 for i in tqdm_notebook(link_list):
     news_data.append(news_parsing(i))
