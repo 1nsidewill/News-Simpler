@@ -1,9 +1,12 @@
 '''
 naver_news_crawler.ipynb
-version. 1.1
-update. 2021/02/04
+version. 2.1
+update. 2021/02/05
+
+- 기간 설정 미적용으로 인한 url load 문제 보완.
 '''
 
+import csv
 import re
 import pandas as pd
 import numpy as np
@@ -19,18 +22,103 @@ from bs4 import BeautifulSoup
 
 # ================ method ===================
 
-# ------------------------------
-# load_url : 페이지 번호로 url 가져옴
-# ------------------------------
-def load_url(cont_num):
-    search_key = 'BTS | 방탄소년단'
-    sort_num = '2' #0:관련된 순, 1:최신순, 2:오래된순
-    start_date = '2020.09.01'
-    end_date = '2020.12.31'
-    cont_num = str(cont_num)  #페이지 별 첫번째 뉴스 번호 (페이지당 10건)
+# --------------------------------------
+# 검색 조건 설정 1 : 검색어, 정렬방법 
+# --------------------------------------
+def set_seachKey_sort(search_key, sort_num):
+    '''
+    input - 
+      sort_num : 0.관련된 순, 1.최신순, 2.오래된 순
+      
+    return - url
+    '''
+        
     url='https://search.naver.com/search.naver?&where=news&query='+search_key\
-    +'&sm=tab_pge&sort='+sort_num+'&photo=0&field=1&reporter_article=&pd=3&ds='+start_date+'&de='+end_date+'&docid=&nso=so:da,p:from'\
-    + start_date.replace('.','')+'to'+end_date.replace('.','')+',a:t&mynews=1&start='+cont_num+'&refresh_start=0'
+    +'&sm=tab_srt&sort='+str(sort_num)+'&photo=0&field=1&reporter_article=&pd=3&ds=2020.11.01&de=2020.12.31&docid=&nso=so%3Ada%2Cp%3Afrom20201101to20201231%2Ca%3At&mynews=1&refresh_start=1&related=0'
+    
+    return url
+
+# --------------------------------------
+# 검색 조건 설정 2 : 검색 기간 설정
+# --------------------------------------
+def set_period(driver, start_date, end_date):
+    '''
+    input - 
+      start_date, end_date  : type = str
+    '''
+       
+    # - btn: '기간'
+    driver.find_element(By.XPATH, '//*[@id="snb"]/div/ul/li[2]/a').click() 
+    time.sleep(0.5)
+     
+    # - input : 검색 기간
+    input_sd = driver.find_element_by_id('news_input_period_begin')  # start_date
+    input_ed = driver.find_element_by_id('news_input_period_end')    # end_date
+    input_sd.send_keys(str(start_date))
+    input_ed.send_keys(str(end_date))
+    print('--기간입력--')
+    time.sleep(0.5)
+    
+    # - btn : '적용'
+    driver.find_element_by_xpath('//*[@id="snb"]/div/ul/li[2]/div/div[2]/span/button/span').click()
+    print('적용')
+    
+    return True
+
+# --------------------------------------
+# 검색 조건 설정 3 : 언론사 설정 
+# --------------------------------------
+def set_media(driver, media_list):
+    '''
+    input - 
+      media_list : 언론사 list, type = dict {'media name':'Xpath'}
+    
+    return - True
+    '''
+    
+    # - btn : '언론사'
+    driver.find_element(By.XPATH, '//*[@id="snb"]/div/ul/li[5]/a').click()
+    print('--언론사 설정--')
+    # - check box : 언론사 
+    for s in media_list:
+        element = driver.find_element(By.XPATH, media_list[s])
+        driver.execute_script("arguments[0].click();", element)
+        print('media:', s)
+        time.sleep(0.5)
+    # - btn : 확인
+    driver.find_element(By.XPATH, '//*[@id="snb"]/div/ul/li[5]/div/span/span[1]/button').click()
+    print('확인')    
+    
+    return True
+
+
+# --------------------------------------
+# contents number를 제외한 앞,뒤 url set
+# --------------------------------------
+def set_url(cur_url):
+    '''
+    input - 
+      cur_url : driver.current_urlcurrent
+      
+    return - 
+      default_url : contents number 제외한 앞, 뒤 url (type : list)
+    '''
+    url_t = cur_url.split('&mynews')
+    url_a = ''.join([url_t[0],'&mynews=1&start='])
+    default_url = [url_a, '&refresh_start=1']
+    print('--default url--')
+    for n,i in enumerate(default_url):
+        print(n,'. ', i)
+    
+    return default_url
+
+
+# --------------------------------------
+# load_url : contents number로 url 가져옴
+# --------------------------------------
+def load_url(default_url, cont_num):   # default_url : type: list
+    url =default_url[0] + str(cont_num) + default_url[1]
+    
     return url
     
 # ------------------------------
@@ -131,31 +219,28 @@ def news_parsing(url):
 # - webdriver open
 path = './lib/chromedriver.exe'
 driver = webdriver.Chrome(path)
-driver.get(load_url(1))             # 검색 조건 지정된 1 페이지 접속
-time.sleep(0.5)
 
-# ------------------------------
-# 검색 조건: 언론사 선택
-# ------------------------------
+# 검색 조건
+search_key = 'BTS | 방탄소년단'
+sort_num = '2'   # 0.관련된 순, 1.최신순, 2.오래된 순
+start_date = '2020.01.01'
+end_date = '2020.12.30'
 media_list = {'경향':'//*[@id="ca_1032"]', '중앙':'//*[@id="ca_1025"]','한겨례':'//*[@id="ca_1028"]','조선':'//*[@id="ca_1023"]'}
 
-# - btn: 출처
-driver.find_element(By.XPATH, '//*[@id="snb"]/div/ul/li[5]/a').click() 
+# 검색어, 정렬순 적용된 1 페이지 접속
+driver.get(set_seachKey_sort(search_key, sort_num))  
+time.sleep(0.5)
 
-# - check box: 언론사 선택
-for s in media_list:
-    element = driver.find_element(By.XPATH, media_list[s])
-    driver.execute_script("arguments[0].click();", element)
-    print(s)
-    time.sleep(0.5)
-    
-# - btn: 확인
-driver.find_element(By.XPATH, '//*[@id="snb"]/div/ul/li[5]/div/span/span[1]/button').click()
-print('확인')    
+# 검색 조건 적용
+set_period(driver, start_date, end_date)  
+set_media(driver, media_list)
+
 
 # ------------------------------
 # 웹페이지 순서대로, 뉴스 url 가져오기
 # ------------------------------
+default_url = set_url(driver.current_url)
+
 num = 1 
 link_list =[]
 naver = 'news.naver.com/main/'
@@ -179,6 +264,16 @@ while(1):
 
 # - webdriver quit
 # driver.quit()
+
+
+# -----------------------------
+# link list 를 csv 로 저장 (import csv)
+# -----------------------------
+# f = open('./data/project/naver_link_list.txt','w', encoding='utf-8', newline='')
+# wr = csv.writer(f)
+# for i, s in enumerate(link_list):
+#     wr.writerow([i, s])
+# f.close()
 
 
 # ------------------------------
