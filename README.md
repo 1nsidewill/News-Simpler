@@ -49,6 +49,8 @@ K-means 를 이용해 유사도를 측정한 dataset에 대해 군집화.
 ### Summarizing
 ```
 Summarizer + KoBERT
+Gensim Textrank
+Lexrank
 ```
 
 ### Visualization
