@@ -4,9 +4,9 @@ Summarized News in Timeline
 
 ## About Team
 
-Jung Min Yeo @jmin1117
-Will Gyuha Yi @1nisdewill
-Peter Bin Jino @bean-gno
+Jung Min Yeo @jmin1117  
+Will Gyuha Yi @1nisdewill  
+Peter Bin Jino @bean-gno  
 
 
 ### Requirements
