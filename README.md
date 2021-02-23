@@ -5,7 +5,7 @@ Summarized News in Timeline
 ## About Team
 
 Jung Min Yeo @jmin1117  
-Will Gyuha Yi @1nisdewill  
+Will Gyuha Yi @1nsidewill  
 Peter Bin Jino @bean-gno  
 
 
