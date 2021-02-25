@@ -15,6 +15,7 @@ Peter Bin Jino @bean-gno
 rhinoMorph
 Transformers
 konlpy
+streamlit
 ```
 
 ### Installing / 설치
@@ -23,6 +24,7 @@ konlpy
 
 ```
 pip install transformers
+pip install streamlit
 ```
 
 ### NaverNewscrawler
