@@ -87,4 +87,4 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 
 ## Demo 
 
-https://cdn.knightlab.com/libs/timeline3/latest/embed/index.html?source=1zTY1oyRhZga1Kupl8TOOv5KYBbrm_OthtgFOdeDmVY0&font=Default&lang=en&initial_zoom=2&height=650
+https://cdn.knightlab.com/libs/timeline3/latest/embed/index.html?source=1zTY1oyRhZga1Kupl8TOOv5KYBbrm_OthtgFOdeDmVY0&font=Default&lang=en&initial_zoom=2&height=950
