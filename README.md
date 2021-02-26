@@ -16,6 +16,7 @@ rhinoMorph
 Transformers
 konlpy
 streamlit
+bert-extractive-summarizer
 ```
 
 ### Installing / 설치
@@ -25,6 +26,7 @@ streamlit
 ```
 pip install transformers
 pip install streamlit
+pip install bert-extractive-summarizer
 ```
 
 ### NaverNewscrawler
