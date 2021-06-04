@@ -2,6 +2,8 @@
 Summarized News in Timeline  
 요약된 문장으로 보는 뉴스 히스토리
 
+![image](https://user-images.githubusercontent.com/75239607/120752867-4c647780-c545-11eb-9c89-438872e63318.png)
+
 ## About Team
 
 Jung Min Yeo @jmin1117  
